@@ -1,6 +1,6 @@
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.expressions.Window
-import org.apache.spark.sql.functions.{col, desc, expr, mean, rank, stddev_pop}
+import org.apache.spark.sql.functions._
 
 import scala.annotation.tailrec
 
@@ -14,20 +14,24 @@ package object StandardScalerRanker {
    * @param dropCols if true, mean and standard deviation of standardized are dropped
    * @return DataFrame with input DataFrame with score and rank columns
    */
-  def getStandardRankDF(inputDF: DataFrame, grpByList: String, stdFactors: List[String],
+  def getStandardRankDF(inputDF: DataFrame, grpByList: List[String], stdFactors: List[String],
                         dropCols: Boolean = true, calcRankScore: Boolean = true): DataFrame = {
 
+    // Convert stdFactors to iterator | concatenated column in inputDF of stdFactors columns
     val normIterFactors = stdFactors.iterator
+    val concatCols = grpByList.map(col)
+    val concatColName = "grpByConcat"
+    val concatDF = inputDF.withColumn(concatColName, concat_ws("_", concatCols: _*))
 
     // Fill all null values with 0 before standardizing to avoid values being ignored
-    val mergedDFFill = inputDF.na.fill(stdFactors.map(x => (x, 0)).toMap)
+    val mergedDFFill = concatDF.na.fill(stdFactors.map(x => (x, 0.0)).toMap)
 
     def meanStdCalc(df: DataFrame, column: String): DataFrame = {
-      val meanStdDF = df.groupBy(grpByList).agg(mean(column).as("mean_" + column),
+      val meanStdDF = df.groupBy(concatColName).agg(mean(column).as("mean_" + column),
         stddev_pop(column).as("stddev_" + column))
-      val meanStdFinalDF = meanStdDF.withColumnRenamed(grpByList, grpByList + "_" + column)
-      val finalDF = df.join(meanStdFinalDF, df.col(grpByList) === meanStdFinalDF.col( grpByList + "_" + column),
-        joinType = "left")
+      val meanStdFinalDF = meanStdDF.withColumnRenamed(concatColName, concatColName + "_" + column)
+      val finalDF = df.join(meanStdFinalDF, df.col("grpByConcat") === meanStdFinalDF
+        .col(concatColName + "_" + column), joinType = "left")
       finalDF
     }
 
@@ -42,6 +46,7 @@ package object StandardScalerRanker {
         if (!factors.hasNext) acc
         else recursorHelper(stdrzdColAddFunc(acc, factors.next()))
       }
+
       recursorHelper(df)
     }
 
@@ -51,14 +56,15 @@ package object StandardScalerRanker {
     val finalResult1DF = if (calcRankScore) {
       val _listCols = stdFactors.map(x => col("norm_" + x)).mkString(" + ")
       val calcScoreDF = resultDF.withColumn("score", expr(_listCols))
-      val calcRankDF = calcScoreDF.withColumn("rank", rank().over(Window.partitionBy(grpByList).
-        orderBy(desc("score"))))
+      val calcRankDF = calcScoreDF.withColumn("rank", rank().over(Window.partitionBy("grpByConcat")
+        .orderBy(desc("score"))))
       calcRankDF
     } else resultDF
 
     val finalResult2DF = if (dropCols) {
-      val removeCols = stdFactors.flatMap(x => List(grpByList + "_" + x, "mean_" + x, "stddev_" + x, "norm_" + x))
-      finalResult1DF.drop(removeCols:_*)
+      val removeCols = stdFactors.flatMap(x => List(grpByList + "_" + x, "mean_" + x, "stddev_" + x, "norm_" + x,
+        "grpByConcat_"+ x))
+      finalResult1DF.drop(removeCols: _*)
     } else finalResult1DF
 
     finalResult2DF

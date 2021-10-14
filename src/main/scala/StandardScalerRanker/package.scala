@@ -30,7 +30,7 @@ package object StandardScalerRanker {
       val meanStdDF = df.groupBy(concatColName).agg(mean(column).as("mean_" + column),
         stddev_pop(column).as("stddev_" + column))
       val meanStdFinalDF = meanStdDF.withColumnRenamed(concatColName, concatColName + "_" + column)
-      val finalDF = df.join(meanStdFinalDF, df.col("grpByConcat") === meanStdFinalDF
+      val finalDF = df.join(meanStdFinalDF, df.col(concatColName) === meanStdFinalDF
         .col(concatColName + "_" + column), joinType = "left")
       finalDF
     }
@@ -56,7 +56,7 @@ package object StandardScalerRanker {
     val finalResult1DF = if (calcRankScore) {
       val _listCols = stdFactors.map(x => col("norm_" + x)).mkString(" + ")
       val calcScoreDF = resultDF.withColumn("score", expr(_listCols))
-      val calcRankDF = calcScoreDF.withColumn("rank", rank().over(Window.partitionBy("grpByConcat")
+      val calcRankDF = calcScoreDF.withColumn("rank", rank().over(Window.partitionBy(concatColName)
         .orderBy(desc("score"))))
       calcRankDF
     } else resultDF

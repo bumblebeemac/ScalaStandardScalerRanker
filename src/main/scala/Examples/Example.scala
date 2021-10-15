@@ -19,9 +19,12 @@ object Example extends App {
     .option("sep", ",")
     .csv("src/data/usedcars_dataset.csv")
 
+  // Function call here
   val getMeanStd = getStandardRankDF(aDF, grpByList = List("make", "aspiration", "num_of_doors", "body_style"),
     stdFactors = List("compression_ratio", "horsepower", "peak_rpm", "city_mpg", "highway_mpg", "price"))
+
   getMeanStd.show()
+
   getMeanStd.coalesce(1).write
     .option("header", "true")
     .option("sep", ",")

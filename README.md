@@ -1,6 +1,6 @@
 # ScalaStandardScalerRanker
 StandardScalerRanker - provides simple functionality that standardizes features by removing mean and scaling to unit 
-variance. Then scores based on sum of standardized values and ranks.
+variance. Then ranks based on sum of all standardized values.
 
 # Install
 Use the following to add to your build.sbt libraryDependencies.
@@ -15,9 +15,12 @@ ranked. The criteria for ranking (factors to be standardized) will be determined
 on the project. As products are usually classified using a hierarchical structure, the function requires you to provide 
 the level at which values needs to be grouped by to calculate mean and standard deviation.
 
-Refer to Example.scala in the Examples package for usage.
+Refer to [Example.scala](https://github.com/ravishankars8668/ScalaStandardScalerRanker/blob/main/src/main/scala/Examples/Example.scala) in the Examples package for usage.
 
 Credits: [Kaggle](https://www.kaggle.com/)
 
 Dataset link: [https://www.kaggle.com/ammaraahmad/used-cars-dataset](https://www.kaggle.com/ammaraahmad/used-cars-dataset)
 
+In the example, mean and standard deviation is calculated for standardization factors ("compression_ratio", "horsepower", 
+"peak_rpm", "city_mpg", "highway_mpg", "price") after they are grouped by ("make", "aspiration", "num_of_doors", 
+"body_style").

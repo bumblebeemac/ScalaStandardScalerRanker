@@ -31,3 +31,9 @@ jobs:
         java-version: "adopt@1.8"
     - name: Run tests
       run: sbt test
+    - run: sbt ci-release
+      env:
+          PGP_PASSPHRASE: $
+          PGP_SECRET: $
+          SONATYPE_PASSWORD: $
+          SONATYPE_USERNAME: $
